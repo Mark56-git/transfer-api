@@ -339,18 +339,49 @@ async function anthropicMessages(request, env, body) {
 }
 
 async function openAIModels(request, env) {
-  const catalog = await getModelCatalog(request, env);
+  // 1. 尝试获取上游 (Agnes) 的模型列表
+  let catalog = [];
+  try {
+    catalog = await getModelCatalog(request, env);
+  } catch (e) {
+    catalog = fallbackModels(); // 如果上游挂了，用默认的
+  }
+
+  // 2. 将上游模型转换为 OpenAI 格式
+  const upstreamModels = catalog.map((model) => ({
+    id: model.id,
+    object: "model",
+    created: 0,
+    owned_by: model.provider || "agnes-upstream",
+    permission: [],
+    root: model.id,
+    parent: null,
+  }));
+
+  // 3. 注入 Gemini 模型 (让你能在 Chatbox 里选到)
+  const geminiModels = Object.keys(GEMINI_MODELS).map((key) => ({
+    id: key, // 客户端看到的名字
+    object: "model",
+    created: 0,
+    owned_by: "google-direct", // 标记这是直连 Google 的
+    permission: [],
+    root: GEMINI_MODELS[key], // 实际调用的模型
+    parent: null,
+  }));
+
+  // 4. 合并列表 (去重)
+  const allModels = [...upstreamModels];
+  const existingIds = new Set(upstreamModels.map(m => m.id));
+  
+  for (const gm of geminiModels) {
+    if (!existingIds.has(gm.id)) {
+      allModels.push(gm);
+    }
+  }
+
   return jsonResponse({
     object: "list",
-    data: catalog.map((model) => ({
-      id: model.id,
-      object: "model",
-      created: 0,
-      owned_by: model.provider || "unlimited.surf",
-      permission: [],
-      root: model.id,
-      parent: null,
-    })),
+    data: allModels,
   });
 }
 
