@@ -1508,8 +1508,15 @@ function streamGeminiToOpenAI(upstream, meta) {
 function mapGeminiFinishReason(reason) {
   if (!reason) return "stop";
   switch (reason) {
-    case "STOP": return "stop";
-    case "MAX_TOKENS": return "length";
-    case "SAFETY": return "content_filter";
-    case "RECITATION": return "content_filter";
-    default: return "
+    case "STOP": 
+      return "stop";
+    case "MAX_TOKENS": 
+      return "length";
+    case "SAFETY": 
+      return "content_filter";
+    case "RECITATION": 
+      return "content_filter";
+    default: 
+      return "stop";
+  }
+}
