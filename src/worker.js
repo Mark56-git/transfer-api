@@ -1214,65 +1214,6 @@ function mcpInfo(request) {
   };
 }
 
-async function geminiChatCompletions(
-body,
-env,
-googleModel,
-clientModel
-){
-
-
-if(!env.GEMINI_API_KEY){
-
-return errorResponse(
-500,
-"missing_api_key",
-"GEMINI_API_KEY missing"
-);
-
-}
-
-
-
-const url =
-`https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:generateContent?key=${env.GEMINI_API_KEY}`;
-
-
-
-const contents =
-(body.messages || [])
-.map(message=>{
-
-
-return {
-
-role:
-message.role==="assistant"
-?
-"model"
-:
-"user",
-
-
-parts:[
-{
-text:
-typeof message.content==="string"
-?
-message.content
-:
-JSON.stringify(message.content)
-}
-]
-
-
-};
-
-
-});
-
-
-
 const response =
 await fetch(
 url,
