@@ -1,13 +1,19 @@
-const DEFAULT_OPENAI_MODEL = "gpt-4o"; // 建议改为一个通用的默认模型
-
-// 修正为真实存在的 Gemini 模型名称
+// 放在代码最上方
 const GEMINI_MODELS = {
-  "gemini-flash": "gemini-1.5-flash",
-  "gemini-pro": "gemini-1.5-pro",
-  "gemini-1.5-flash": "gemini-1.5-flash",
-  "gemini-1.5-pro": "gemini-1.5-pro",
-  "gemini-2.0-flash": "gemini-2.0-flash"
+  // 官方完整名称 (推荐在 Chatbox 里直接用这些)
+  "gemini-3-flash-preview": "gemini-3-flash-preview",
+  "gemini-2.5-flash": "gemini-2.5-flash",
+  "gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
+  "gemini-2.5-pro": "gemini-2.5-pro",
+  "gemini-2.0-flash": "gemini-2.0-flash",
+  "gemini-2.0-flash-lite": "gemini-2.0-flash-lite",
+  
+  // 简短别名 (方便手打)
+  "gemini-flash": "gemini-3-flash-preview", 
+  "gemini-pro": "gemini-2.5-pro",
 };
+
+const DEFAULT_OPENAI_MODEL = "gpt-4o"; // 建议改为一个通用的默认模型
 
 const DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20241022"; // 建议使用真实存在的版本
 
