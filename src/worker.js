@@ -1,4 +1,17 @@
-const DEFAULT_UPSTREAM_BASE_URL = "https://unlimited.surf";
+const DEFAULT_OPENAI_MODEL =
+"gemini-flash";
+
+
+const GEMINI_MODELS = {
+
+"gemini-flash":
+"gemini-3.8-flash",
+
+
+"gemini-pro":
+"gemini-3.1-pro"
+
+};
 const DEFAULT_OPENAI_MODEL = "gateway-gpt-5-5";
 const DEFAULT_CLAUDE_MODEL = "claude-opus-4-7-20260101";
 
