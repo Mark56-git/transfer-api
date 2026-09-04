@@ -1320,8 +1320,6 @@ finish_reason:
 
 });
 
-
-}
 async function geminiChatCompletions(body, env, googleModel, clientModel) {
   if (!env.GEMINI_API_KEY) {
     return errorResponse(500, "missing_api_key", "GEMINI_API_KEY is required in environment variables.");
