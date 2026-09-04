@@ -2,20 +2,12 @@ name = "unlimited-transfer-api"
 main = "src/worker.js"
 compatibility_date = "2026-09-04"
 
-# Store the upstream key as a secret instead of committing it here:
-#   wrangler secret put UNLIMITED_SURF_API_KEY
-#
-# Optional: protect this Worker with your own client-facing key:
-#   wrangler secret put WORKER_API_KEY
-# When WORKER_API_KEY is set, clients must send it as Authorization: Bearer <key>,
-# x-api-key: <key>, or anthropic-api-key: <key>. If it is not set, the Worker
-# keeps the old behavior and accepts any client key.
-#
-# Clients can also send their own key as Authorization: Bearer <key>
-# or x-api-key: <key>; the Worker forwards it upstream when no secret is set.
+# 开启日志，这样报错时能看到具体原因
+[observability]
+enabled = true
 
 [vars]
-
-DEFAULT_MODEL="gemini-flash"
-
-DEFAULT_CLAUDE_MODEL="claude-sonnet"
+# 建议改成一个真实存在的模型，或者留空让代码使用内置默认值
+# 如果要用 Gemini，必须是你 GEMINI_MODELS 里定义的 key，比如 "gemini-flash"
+DEFAULT_MODEL = "gemini-flash" 
+DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
