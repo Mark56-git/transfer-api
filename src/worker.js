@@ -1,23 +1,17 @@
-const DEFAULT_OPENAI_MODEL =
-"gemini-flash";
+const DEFAULT_OPENAI_MODEL = "gpt-4o"; // 建议改为一个通用的默认模型
 
-
+// 修正为真实存在的 Gemini 模型名称
 const GEMINI_MODELS = {
-
-"gemini-flash":
-"gemini-3.8-flash",
-
-
-"gemini-pro":
-"gemini-3.1-pro"
-
+  "gemini-flash": "gemini-1.5-flash",
+  "gemini-pro": "gemini-1.5-pro",
+  "gemini-1.5-flash": "gemini-1.5-flash",
+  "gemini-1.5-pro": "gemini-1.5-pro",
+  "gemini-2.0-flash": "gemini-2.0-flash"
 };
 
-const DEFAULT_CLAUDE_MODEL = "claude-opus-4-7-20260101";
+const DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20241022"; // 建议使用真实存在的版本
 
-
-const DEFAULT_UPSTREAM_BASE_URL =
-"https://apihub.agnes-ai.com/v1";
+const DEFAULT_UPSTREAM_BASE_URL = "https://apihub.agnes-ai.com/v1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
