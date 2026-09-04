@@ -162,20 +162,15 @@ async function openAIDirectCapability(request, env, body, route) {
   });
 }
 
-async function openAIChatCompletions(request, env, body) {
+async function openAIChatCompletions(request, env, body) {  // ← 函数开始
   const model = body.model || env.DEFAULT_MODEL || DEFAULT_OPENAI_MODEL;
-  if(
- GEMINI_MODELS[model]
-){
+  
+  // 【核心拦截】如果模型在 GEMINI_MODELS 里，走直连
+  if (GEMINI_MODELS[model]) {
+    return geminiChatCompletions(body, env, GEMINI_MODELS[model], model);
+  }
 
- return geminiChatCompletions(
-    body,
-    env,
-    GEMINI_MODELS[model],
-    model
- );
-
-}
+  // 下面是原来的 Agnes 逻辑
   const created = nowSeconds();
   const id = `chatcmpl_${randomId()}`;
   const route = chooseUnlimitedRoute(body);
@@ -187,23 +182,23 @@ async function openAIChatCompletions(request, env, body) {
   }
 
   const result = await collectUnlimitedText(request, env, route, payload);
-  return jsonResponse({
+  return jsonResponse({                              // ← jsonResponse 开始
     id,
     object: "chat.completion",
     created,
     model,
-    choices: [
-      {
+    choices: [                                       // ← choices 数组开始
+      {                                              // ← 数组元素对象开始
         index: 0,
         message: { role: "assistant", content: result.text },
         logprobs: null,
         finish_reason: result.finishReason || "stop",
-      },
-    ],
+      },                                             // ← 数组元素对象结束
+    ],                                               // ← choices 数组结束
     usage: usageFromText(payload.message || "", result.text),
     system_fingerprint: "unlimited-surf-worker",
-  });
-}
+  });                                                // ← jsonResponse 结束
+}                                                    // ← 函数结束在这里！
 
 async function openAIResponses(request, env, body) {
   const model = body.model || env.DEFAULT_MODEL || DEFAULT_OPENAI_MODEL;
@@ -1386,3 +1381,135 @@ finish_reason:
 
 
 }
+async function geminiChatCompletions(body, env, googleModel, clientModel) {
+  if (!env.GEMINI_API_KEY) {
+    return errorResponse(500, "missing_api_key", "GEMINI_API_KEY is required in environment variables.");
+  }
+
+  const isStream = body.stream === true;
+  const apiMethod = isStream ? "streamGenerateContent" : "generateContent";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:${apiMethod}?key=${env.GEMINI_API_KEY}${isStream ? "&alt=sse" : ""}`;
+
+  const contents = (body.messages || []).map(message => {
+    let role = "user";
+    if (message.role === "assistant") role = "model";
+    else if (message.role === "system") role = "user";
+
+    const textContent = typeof message.content === "string"
+      ? message.content
+      : (Array.isArray(message.content)
+        ? message.content.map(c => c.type === "text" ? c.text : `[${c.type}]`).join("\n")
+        : String(message.content));
+
+    return { role, parts: [{ text: textContent }] };
+  });
+
+  const payload = { contents };
+  if (body.temperature !== undefined || body.max_tokens !== undefined || body.top_p !== undefined) {
+    payload.generationConfig = {};
+    if (body.temperature !== undefined) payload.generationConfig.temperature = body.temperature;
+    if (body.max_tokens !== undefined) payload.generationConfig.maxOutputTokens = body.max_tokens;
+    if (body.top_p !== undefined) payload.generationConfig.topP = body.top_p;
+  }
+
+  const systemMsg = (body.messages || []).find(m => m.role === "system");
+  if (systemMsg) {
+    payload.systemInstruction = {
+      role: "system",
+      parts: [{ text: typeof systemMsg.content === "string" ? systemMsg.content : JSON.stringify(systemMsg.content) }]
+    };
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Gemini API Error:", response.status, errText);
+    return errorResponse(response.status, "gemini_api_error", `Gemini API failed: ${response.status} - ${errText}`);
+  }
+
+  if (isStream) {
+    return sseResponse(streamGeminiToOpenAI(response, {
+      id: `chatcmpl_${randomId()}`,
+      created: nowSeconds(),
+      model: clientModel
+    }));
+  }
+
+  const data = await response.json();
+  const candidate = data.candidates?.[0];
+
+  if (!candidate || !candidate.content?.parts?.[0]?.text) {
+    const blocked = candidate?.finishReason === "SAFETY";
+    return errorResponse(blocked ? 400 : 500, blocked ? "content_blocked" : "gemini_empty_response", blocked ? "Blocked by safety filters." : "Empty response.");
+  }
+
+  const text = candidate.content.parts[0].text;
+  const finishReason = mapGeminiFinishReason(candidate.finishReason);
+
+  const usage = {
+    prompt_tokens: data.usageMetadata?.promptTokenCount || estimateTokens(JSON.stringify(contents)),
+    completion_tokens: data.usageMetadata?.candidatesTokenCount || estimateTokens(text),
+    total_tokens: data.usageMetadata?.totalTokenCount || (data.usageMetadata?.promptTokenCount + data.usageMetadata?.candidatesTokenCount) || estimateTokens(JSON.stringify(contents) + text)
+  };
+
+  return jsonResponse({
+    id: `chatcmpl_${randomId()}`,
+    object: "chat.completion",
+    created: nowSeconds(),
+    model: clientModel,
+    choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: finishReason }],
+    usage,
+    system_fingerprint: `direct-gemini:${googleModel}`
+  });
+}
+
+function streamGeminiToOpenAI(upstream, meta) {
+  const decoder = new TextDecoder();
+  return new ReadableStream({
+    async start(controller) {
+      writeSse(controller, { id: meta.id, object: "chat.completion.chunk", created: meta.created, model: meta.model, choices: [{ index: 0, delta: { role: "assistant", content: "" }, finish_reason: null }] });
+      try {
+        const reader = upstream.body.getReader();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split(/\r?\n/);
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const data = JSON.parse(jsonStr);
+              const candidate = data.candidates?.[0];
+              if (candidate?.content?.parts?.[0]?.text) {
+                writeSse(controller, { id: meta.id, object: "chat.completion.chunk", created: meta.created, model: meta.model, choices: [{ index: 0, delta: { content: candidate.content.parts[0].text }, finish_reason: null }] });
+              }
+              if (candidate?.finishReason) {
+                writeSse(controller, { id: meta.id, object: "chat.completion.chunk", created: meta.created, model: meta.model, choices: [{ index: 0, delta: {}, finish_reason: mapGeminiFinishReason(candidate.finishReason) }] });
+                writeRawSse(controller, "data: [DONE]\n\n");
+              }
+            } catch (e) { console.warn("Parse SSE error:", e); }
+          }
+        }
+        writeRawSse(controller, "data: [DONE]\n\n");
+      } catch (error) { console.error("Stream error:", error); } finally { controller.close(); }
+    }
+  });
+}
+
+function mapGeminiFinishReason(reason) {
+  if (!reason) return "stop";
+  switch (reason) {
+    case "STOP": return "stop";
+    case "MAX_TOKENS": return "length";
+    case "SAFETY": return "content_filter";
+    case "RECITATION": return "content_filter";
+    default: return "
