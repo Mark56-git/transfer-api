@@ -15,6 +15,10 @@ const GEMINI_MODELS = {
 
 const DEFAULT_CLAUDE_MODEL = "claude-opus-4-7-20260101";
 
+
+const DEFAULT_UPSTREAM_BASE_URL =
+"https://apihub.agnes-ai.com/v1";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
@@ -899,9 +903,10 @@ function constantTimeEqual(actual, expected) {
 }
 
 function upstreamBase(env) {
-  return stripTrailingSlash(env.UPSTREAM_BASE_URL || DEFAULT_UPSTREAM_BASE_URL) + "/";
+  return stripTrailingSlash(
+    env.UPSTREAM_BASE_URL || DEFAULT_UPSTREAM_BASE_URL
+  ) + "/";
 }
-
 function normalizePath(path) {
   if (!path || path === "") return "/";
   const normalized = path.replace(/\/+/g, "/");
@@ -1101,7 +1106,7 @@ function serviceInfo(request, env) {
   const origin = new URL(request.url).origin;
   return {
     ok: true,
-    service: "unlimited.surf OpenAI/Anthropic compatibility Worker",
+    service: "Agnes/Gemini OpenAI/Anthropic compatibility Worker",
     upstream: stripTrailingSlash(env.UPSTREAM_BASE_URL || DEFAULT_UPSTREAM_BASE_URL),
     routes: {
       raw: `${origin}/api/chat, /api/search, /api/merge, /api/models, /api/key, /api/attachments/extract`,
