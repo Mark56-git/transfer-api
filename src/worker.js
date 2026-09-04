@@ -12,7 +12,7 @@ const GEMINI_MODELS = {
 "gemini-3.1-pro"
 
 };
-const DEFAULT_OPENAI_MODEL = "gateway-gpt-5-5";
+
 const DEFAULT_CLAUDE_MODEL = "claude-opus-4-7-20260101";
 
 const CORS_HEADERS = {
