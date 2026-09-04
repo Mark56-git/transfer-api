@@ -160,6 +160,18 @@ async function openAIDirectCapability(request, env, body, route) {
 
 async function openAIChatCompletions(request, env, body) {
   const model = body.model || env.DEFAULT_MODEL || DEFAULT_OPENAI_MODEL;
+  if(
+ GEMINI_MODELS[model]
+){
+
+ return geminiChatCompletions(
+    body,
+    env,
+    GEMINI_MODELS[model],
+    model
+ );
+
+}
   const created = nowSeconds();
   const id = `chatcmpl_${randomId()}`;
   const route = chooseUnlimitedRoute(body);
