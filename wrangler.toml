@@ -1,6 +1,6 @@
 name = "unlimited-transfer-api"
 main = "src/worker.js"
-compatibility_date = "2025-11-21"
+compatibility_date = "2026-09-04"
 
 # Store the upstream key as a secret instead of committing it here:
 #   wrangler secret put UNLIMITED_SURF_API_KEY
@@ -15,6 +15,7 @@ compatibility_date = "2025-11-21"
 # or x-api-key: <key>; the Worker forwards it upstream when no secret is set.
 
 [vars]
-UPSTREAM_BASE_URL = "https://unlimited.surf"
-DEFAULT_MODEL = "gateway-gpt-5-5"
-DEFAULT_CLAUDE_MODEL = "claude-opus-4-7-20260101"
+
+DEFAULT_MODEL="gemini-flash"
+
+DEFAULT_CLAUDE_MODEL="claude-sonnet"
