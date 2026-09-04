@@ -1182,3 +1182,171 @@ function mcpInfo(request) {
     },
   };
 }
+
+async function geminiChatCompletions(
+body,
+env,
+googleModel,
+clientModel
+){
+
+
+if(!env.GEMINI_API_KEY){
+
+return errorResponse(
+500,
+"missing_api_key",
+"GEMINI_API_KEY missing"
+);
+
+}
+
+
+
+const url =
+`https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:generateContent?key=${env.GEMINI_API_KEY}`;
+
+
+
+const contents =
+(body.messages || [])
+.map(message=>{
+
+
+return {
+
+role:
+message.role==="assistant"
+?
+"model"
+:
+"user",
+
+
+parts:[
+{
+text:
+typeof message.content==="string"
+?
+message.content
+:
+JSON.stringify(message.content)
+}
+]
+
+
+};
+
+
+});
+
+
+
+const response =
+await fetch(
+url,
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+
+body:
+JSON.stringify({
+
+contents
+
+})
+
+}
+);
+
+
+
+if(!response.ok){
+
+const err =
+await response.text();
+
+
+console.error(
+"Gemini error",
+err
+);
+
+
+return errorResponse(
+500,
+"gemini_error",
+"Gemini request failed"
+);
+
+}
+
+
+
+const data =
+await response.json();
+
+
+
+const text =
+data
+.candidates?.[0]
+?.content
+?.parts?.[0]
+?.text
+||
+"";
+
+
+
+return jsonResponse({
+
+id:
+"chatcmpl-"+crypto.randomUUID(),
+
+
+object:
+"chat.completion",
+
+
+created:
+Math.floor(Date.now()/1000),
+
+
+model:
+clientModel,
+
+
+choices:[
+
+{
+
+index:0,
+
+
+message:{
+
+role:"assistant",
+
+content:text
+
+},
+
+
+finish_reason:
+"stop"
+
+}
+
+]
+
+
+});
+
+
+}
